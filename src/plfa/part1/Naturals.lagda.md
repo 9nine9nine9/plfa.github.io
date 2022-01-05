@@ -81,7 +81,8 @@ successor of two; and so on.
 Write out `7` in longhand.
 
 ```
--- Your code goes here
+seven : ℕ
+seven = suc (suc (suc (suc (suc (suc (suc zero))))))
 ```
 
 
@@ -430,7 +431,8 @@ other word for evidence, which we will use interchangeably, is _proof_.
 Compute `3 + 4`, writing out your reasoning as a chain of equations, using the equations for `+`.
 
 ```
--- Your code goes here
+_ : 3 + 4 ≡ 7
+_ = refl
 ```
 
 
@@ -506,7 +508,9 @@ Define exponentiation, which is given by the following equations:
 Check that `3 ^ 4` is `81`.
 
 ```
--- Your code goes here
+_^_ : ℕ → ℕ → ℕ
+a ^ zero = 1
+a ^ suc b = a * (a ^ b)
 ```
 
 
@@ -919,6 +923,21 @@ Confirm that these both give the correct answer for zero through four.
 
 ```
 -- Your code goes here
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (n O) = n I
+inc (n I) = (inc n) O
+
+_ = inc (⟨⟩ I O I I) ≡ ⟨⟩ I I O O
+
+to : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩ = 0
+from (b O) = (from b) * 2
+from (b I) = (from b) * 2 + 1
 ```
 
 

@@ -29,7 +29,7 @@ and some operations upon them.  We also import a couple of new operations,
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; step-≡; _∎)
-open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _^_)
 ```
 
 
@@ -703,6 +703,11 @@ first four days using a finite story of creation, as
 
 ```
 -- Your code goes here
+-- In the beginning, we know nothing about associativity
+-- On day 1, we know 0 : ℕ
+-- On day 2, we know 1 : ℕ and all associative sums that yield 0: (0 + 0) + 0 ≡ 0 + (0 + 0)
+-- On day 3, we know 2 : ℕ and all associative sums that yield 1: (1 + 0) + 0 ≡ 1 + (0 + 0), (0 + 1) + 0 ≡ 0 + (1 + 0), (0 + 0) + 1 ≡ 0 + (0 + 1), ...
+-- ...
 ```
 
 ## Associativity with rewrite
@@ -869,6 +874,18 @@ is associative and commutative.
 
 ```
 -- Your code goes here
++-swap : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
++-swap zero n p = refl
++-swap m n p =  -- cannot use rewrite as it's mutually recursive over m & n
+  begin
+    m + (n + p)
+  ≡⟨ +-comm m (n + p) ⟩
+    (n + p) + m
+  ≡⟨ +-assoc n p m ⟩
+    n + (p + m)
+  ≡⟨ cong (n +_) (+-comm p m) ⟩
+    n + (m + p)
+  ∎
 ```
 
 
@@ -882,6 +899,10 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 -- Your code goes here
+*-distrib-+ : ∀ (m n p : ℕ) → (m + n) * p ≡ m * p + n * p
+*-distrib-+ zero n p = refl
+*-distrib-+ (suc m) n p rewrite *-distrib-+ m n p
+                              | sym (+-assoc p (m * p) (n * p)) = refl
 ```
 
 
@@ -895,6 +916,10 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 -- Your code goes here
+*-assoc : ∀ (m n p : ℕ) → (m * n) * p ≡ m * (n * p)
+*-assoc zero n p = refl
+*-assoc (suc m) n p rewrite *-distrib-+ n (m * n) p
+                          | *-assoc m n p = refl
 ```
 
 
@@ -909,6 +934,18 @@ you will need to formulate and prove suitable lemmas.
 
 ```
 -- Your code goes here
+*-annihilʳ : ∀ (n : ℕ) → n * 0 ≡ 0
+*-annihilʳ zero = refl
+*-annihilʳ (suc n) = *-annihilʳ n
+
+*-expand : (m n : ℕ) → m + m * n ≡ m * suc n
+*-expand zero n = refl
+*-expand (suc m) n rewrite +-swap m n (m * n)
+                         | *-expand m n = refl
+
+*-comm : ∀ (m n : ℕ) → m * n ≡ n * m
+*-comm 0 n = sym (*-annihilʳ n)
+*-comm (suc m) n rewrite *-comm m n = *-expand n m
 ```
 
 
@@ -922,6 +959,10 @@ for all naturals `n`. Did your proof require induction?
 
 ```
 -- Your code goes here
+0∸n≡0 : ∀ (n : ℕ) → 0 ∸ n ≡ 0
+0∸n≡0 zero = refl
+0∸n≡0 (suc n) = refl
+-- no induction :)
 ```
 
 
@@ -935,6 +976,12 @@ for all naturals `m`, `n`, and `p`.
 
 ```
 -- Your code goes here
+∸-+-assoc : ∀ (m n p : ℕ) → m ∸ n ∸ p ≡ m ∸ (n + p)
+∸-+-assoc zero n p rewrite 0∸n≡0 n
+                         | 0∸n≡0 p
+                         | 0∸n≡0 (n + p) = refl
+∸-+-assoc (suc m) zero p = refl
+∸-+-assoc (suc m) (suc n) p rewrite ∸-+-assoc m n p = refl
 ```
 
 
@@ -950,6 +997,37 @@ for all `m`, `n`, and `p`.
 
 ```
 -- Your code goes here
+*-identityʳ : ∀ (n : ℕ) → n * 1 ≡ n
+*-identityʳ zero = refl
+*-identityʳ (suc n) rewrite *-identityʳ n = refl
+
+^-distribˡ-+-* : ∀ (m n p : ℕ) → m ^ (n + p) ≡ (m ^ n) * (m ^ p)
+^-distribˡ-+-* m zero    p rewrite +-identityʳ (m ^ p) = refl
+^-distribˡ-+-* m (suc n) p rewrite ^-distribˡ-+-* m n p
+                                 | *-assoc m (m ^ n) (m ^ p) = refl
+
+*-abcd→acbd : ∀ (a b c d : ℕ) → (a * b) * (c * d) ≡ (a * c) * (b * d)
+*-abcd→acbd a b c d rewrite *-assoc a b (c * d)
+                          | sym (*-assoc b c d)
+                          | *-comm b c
+                          | *-assoc c b d
+                          | sym (*-assoc a c (b * d)) = refl
+
+^-distribˡ-* : ∀ (m n p : ℕ) → (m * n) ^ p ≡ (m ^ p) * (n ^ p)
+^-distribˡ-* m n zero = refl
+^-distribˡ-* m n (suc p) rewrite ^-distribˡ-* m n p
+                               | *-abcd→acbd m n (m ^ p) (n ^ p) = refl
+
+^-identity : ∀ (n : ℕ) → n ^ 1 ≡ n
+^-identity zero = refl
+^-identity (suc n) rewrite *-identityʳ n = refl
+
+^-*-assoc : ∀ (m n p : ℕ) → (m ^ n) ^ p ≡ m ^ (n * p)
+^-*-assoc m n zero    rewrite *-annihilʳ n = refl
+^-*-assoc m n (suc p) rewrite ^-*-assoc m n p
+                            | sym (^-distribˡ-+-* m n (n * p))
+                            | *-expand n p
+                            = refl
 ```
 
 
@@ -975,6 +1053,47 @@ For each law: if it holds, prove; if not, give a counterexample.
 
 ```
 -- Your code goes here
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+inc : Bin → Bin
+inc ⟨⟩    = ⟨⟩ I
+inc (n O) = n I
+inc (n I) = (inc n) O
+
+to : ℕ → Bin
+to zero    = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩    = 0
+from (b O) = (from b) * 2
+from (b I) = suc ((from b) * 2)
+
+suc∘suc2⟷2*suc : ∀ (n : ℕ) → suc (suc (2 * n)) ≡ 2 * suc n
+suc∘suc2⟷2*suc n rewrite +-identityʳ n
+                       | +-suc n n
+                       = refl
+
+from∘inc⟷suc∘from : ∀ (b : Bin) → from (inc b) ≡ suc (from b)
+from∘inc⟷suc∘from ⟨⟩    = refl
+from∘inc⟷suc∘from (b O) = refl
+from∘inc⟷suc∘from (b I) rewrite *-comm (from b) 2
+                              | suc∘suc2⟷2*suc (from b)
+                              = {!!}
+
+to∘from⟷id : ∀ (b : Bin) → to (from b) ≡ b
+to∘from⟷id ⟨⟩    = {!!}
+to∘from⟷id (b O) = {!!}
+to∘from⟷id (b I) = {!!}
+
+from∘to⟷id : ∀ (n : ℕ) → from (to n) ≡ n
+from∘to⟷id zero = refl
+from∘to⟷id (suc n) rewrite from∘inc⟷suc∘from (to n)
+                         | from∘to⟷id n
+                         = refl
 ```
 
 
